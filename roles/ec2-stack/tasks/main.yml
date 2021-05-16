@@ -1,0 +1,39 @@
+
+---
+- block:
+
+  - name: Include Localized Variable File(s)
+    include_vars: "{{ item }}"
+    with_items:
+       "{{ brick_vars }}"
+
+  - name: Admin Assume Role
+    # Get a session token (more details: http://docs.aws.amazon.com/STS/latest/APIReference/API_GetSessionToken.html)
+    sts_session_token:
+      duration_seconds: 3600
+    register: target_creds
+
+
+
+  - name: Setting Environment Vars
+    set_fact:
+       environment_vars:
+              AWS_ACCESS_KEY_ID: "{{ target_creds.sts_creds.access_key }}"
+              AWS_SECRET_ACCESS_KEY: "{{ 
+                target_creds.sts_creds.secret_key }}"
+              AWS_SECURITY_TOKEN: "{{ target_creds.sts_creds.session_token }}"
+
+
+####################################################################################
+#  Execute deployment method
+####################################################################################
+
+
+  - name: Include Construct Tasks
+    include: common/construct.yml
+    when: application_method  == "construct"
+
+  - name: Include Destruct Tasks
+    include: common/destruct.yml
+    when: application_method  == "destruct"
+

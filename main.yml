@@ -1,0 +1,6 @@
+- hosts: localhost
+
+
+  roles:
+    - { role: ec2-stack, building_blocks: ["ec2"], brick_vars: ["vpc_config.yml", "ec2-config.yml"] }
+

@@ -1,0 +1,6 @@
+# Specify Deployment Region
+region: "us-east-2"
+
+# Specify Deployment VPC ID
+vpc_id: "vpc-ed73be86"
+ec2_vpc_subnet_id: "subnet-4a082a30"

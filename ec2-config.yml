@@ -1,0 +1,81 @@
+ec2_platform: "centos"
+ec2_instance_count: 1
+ec2_instance_type: "t2.micro"
+
+ec2_volumes:
+  - DeviceName: /dev/sda1
+    Ebs:
+      DeleteOnTermination: true
+      VolumeType: gp2
+      VolumeSize: 30
+ami_id: "ami-01e36b7901e884a10"
+application_method: "construct"
+ec2_key_pair: "deepthi"
+ec2_security_group_name: test-sg
+ec2_timeout: 300
+application_name: "test"
+release_branch: "main"
+ec2_tags: [
+{"Key":"ApplicationName","Value":"{{ application_name | upper }}" },
+{"Key":"Release","Value":"{{ release_branch }}" }
+]
+iam_role_for_instance_profile: "EC2-Instance-Role"
+user_data: userdata.sh
+
+## EC2 Cloudwatch Alarm Metrics
+ec2_user_defined_metric:
+- metric: "CPUUtilization"
+  unit: "Percent"
+  statistic: "Average"
+  comparison: ">="
+  alarm_name: "ec2-cpu-util"
+  period: 60
+  threshold: 90
+  namespace: "AWS/EC2"
+  evaluation_periods: 60
+  description: "This alarm will be enabled if cpu utilization crosses threshold"
+- metric: "MemoryUtilization"
+  unit: "Percent"
+  statistic: "Average"
+  comparison: ">="
+  alarm_name: "ec2-memory-util"
+  period: 60
+  threshold: 90
+  evaluation_periods: 60
+  namespace: "System/Linux"
+  description: "This alarm will be enabled if memory utilized crosses threshold"
+- status_check:
+  metric: "StatusCheckFailed"
+  unit: "Count"
+  statistic: "Maximum"
+  comparison: ">="
+  alarm_name: "ec2-status-check"
+  period: 60
+  threshold: 1
+  evaluation_periods: 60
+  namespace: "AWS/EC2"
+  description: "This alarm will be enabled if status checks fail"
+
+
+## EC2 Security Group Inbound Rules
+## Modify or add additional rules as needed
+##   NOTE: Addiitional samples provided to show usage of source security groups rather than cidr block range
+ec2_sg_user_defined_rules:
+- proto: tcp
+  port: 80
+  cidr_ip: 172.31.0.0/16
+- proto: tcp
+  port: 22
+  cidr_ip: 172.31.0.0/16
+#- proto: tcp
+#  port:  40
+#  source_sg: sg-
+#- proto: tcp
+#  port: "{{ asg_ssh_port }}"
+#  source_sg: "{{ elb_security_group_id }}"
+
+confirm_ec2_deletion: "true"
+confirm_ec2_sg_deletion: "true"
+
+ec2_replace_existing_rules_ingress: true
+ec2_replace_existing_rules_egress: true

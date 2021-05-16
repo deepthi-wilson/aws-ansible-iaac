@@ -1,0 +1,4 @@
+- name: Create EC2 Centos  Instance
+  include: "{{ role_path }}/tasks/EC2/ec2-instance-create.yml"
+  when: '"ec2" in building_blocks'
+  

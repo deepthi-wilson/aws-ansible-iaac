@@ -1,0 +1,69 @@
+##
+##
+- block:
+
+  - name: Include Task File to Create Security Group for EC2
+    include: ../SG/sg-ec2-create.yml
+
+- block:
+  - set_fact:
+
+      ec2_tags: "{{[{'Tags': (ec2_tags) + (user_defined_tags | default([]) )} ]}}"
+ ##
+ ## Create OnDemand Instance
+ ##
+
+  - name: Create EC2 OnDemand Instance
+    command: >
+      aws ec2 run-instances
+      --image-id {{ ami_id }}
+      --instance-type {{ ec2_instance_type }}
+      --key-name {{ ec2_key_pair | default(omit) }}
+      --count {{ ec2_instance_count }}
+      --region {{ region }}
+      --subnet-id {{ ec2_vpc_subnet_id }}
+      --security-group-ids {{ ec2_security_group_id }}
+      --block-device-mappings '{{ ec2_volumes | to_json  }}'
+      --iam-instance-profile 'Name={{ iam_role_for_instance_profile }}'
+      --user-data file://{{ user_data }}
+      --tag-specifications '{{ ([{'ResourceType':'instance' }][0] | combine (ec2_tags[0]))|to_json}}' '{{ ([{'ResourceType':'volume' }][0] | combine (ec2_tags[0]))|to_json}}'
+      --query Instances[*].[InstanceId,PrivateIpAddress]
+    register: ec2_onDemand
+    environment: "{{ environment_vars }}"
+    when: "ec2_spot_required is undefined or ec2_spot_required == 'false' or ('(InvalidParameterCombination)' in ec2_spot.stderr and ec2_on_demand_switch is defined and ec2_on_demand_switch == 'true' )"
+
+  - name: Get Details of Newly Created EC2 OnDemand Instance(s)
+    set_fact:
+      new_instance_details: "{{ ec2_onDemand.stdout | from_json }}"
+    when: "ec2_spot_required is undefined or ec2_spot_required == 'false' or (ec2_spot_required is defined and ec2_spot_required == 'true' and '(InvalidParameterCombination)' in ec2_spot.stderr and ec2_on_demand_switch is defined and ec2_on_demand_switch == 'true' )"
+
+  - name: Get Instance Id and IP of newly created Instance(s)
+    set_fact:
+      ec2_new_instance_ids:  "{% for instance in new_instance_details %}{{ instance[0] }}{% if not loop.last %},{% endif %}{% endfor %}"
+      ec2_private_ips: "{% for instance in new_instance_details %}{{ instance[1] }}{% if not loop.last %},{% endif %}{% endfor %}"
+
+  - name: Display IP Address(es) of Newly Created Instance(s)
+    debug:
+      msg: "The Private IP(s) of {{ ec2_platform }} instance(s) created: {{ ec2_private_ips }}"
+
+  - name: Display Instance Id(s) of Newly Created Instance(s)
+    debug:
+      msg: "The Instance Id(s) of {{ ec2_platform }} instance(s) created:  {{ ec2_new_instance_ids }}"
+
+  - name: Wait for Centos Instance(s) to be Up and Running
+    wait_for:
+      host: "{{ item }}"
+      port: 22
+      timeout: "{{ ec2_timeout }}"
+      state: started
+    ignore_errors: true
+    with_items:
+    - "{{ ec2_private_ips.split(',') }}"
+    when: "ec2_platform is defined and ec2_platform == 'centos'"
+
+
+#- block:
+ # - name: Include Task File to Create Alarms for EC2 Instance(s)
+ #   include: ../Cloudwatch/ec2-create-alarms.yml
+...
+
