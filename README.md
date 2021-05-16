@@ -6,4 +6,4 @@ Simple AWS infra set up of EC2 instance with ansible playbooks
 
 Spinning up of centos ec2 instances in AWS cloud
 Go through ec2-config.yml to update the values
-=
+
